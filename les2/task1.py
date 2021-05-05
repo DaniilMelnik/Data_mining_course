@@ -100,9 +100,20 @@ class GbBNewsParse(GbBlogParse):
             "date": datetime.datetime.fromisoformat(publish_date["datetime"]),
             "author": author.text,
             "author_url": urljoin(url, author.parent["href"]),
-            "comments": [comment for comment in comments],
+            "comments": self.parse_comment(comments),
         }
         return data
+
+    def parse_comment(self, comments):
+        comment_list = {
+            f"comment_{i}": {
+                "author_name": comment["comment"]["user"]["full_name"],
+                "body": comment["comment"]["body"],
+                "children": self.parse_comment(comment["comment"]["children"]),
+            }
+            for i, comment in enumerate(comments)
+        }
+        return comment_list
 
 
 if __name__ == "__main__":
