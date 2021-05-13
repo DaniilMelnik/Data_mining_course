@@ -40,7 +40,6 @@ class AvitoSpider(scrapy.Spider):
         yield from self._get_follow(response, self._xpath_selectors["flats"], self.parse_flat)
 
     def parse_flat(self, response):
-        print(1)
         loader = AvitoLoader(response=response)
         loader.add_value("url", response.url)
         for key, xpath in self._xpath_data_selectors.items():

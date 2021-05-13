@@ -24,13 +24,3 @@ class AvitoLoader(ItemLoader):
     feature_data_out = Identity()
 
     author_out = TakeFirst()
-
-    # title_out = TakeFirst()
-    # salary_in = MapCompose(
-    #     lambda line: map(lambda word: re.sub(r"[\xa0 ]", "", word, re.UNICODE), line.split())
-    # )
-    # salary_out = Join()
-    # description_out = Join("\n")
-    # key_skills_out = Identity()
-    # author_in = MapCompose(get_author_url)
-    # author_out = TakeFirst()
