@@ -5,6 +5,9 @@
 
 
 # useful for handling different item types with a single interface
+from scrapy import Request
+
+from scrapy.pipelines.images import ImagesPipeline
 from itemadapter import ItemAdapter
 from .settings import BOT_NAME
 from pymongo import MongoClient
@@ -22,4 +25,15 @@ class MongoPipeline:
 
     def process_item(self, item, spider):
         self.db[spider.name].insert_one(item)
+        return item
+
+
+class ImageDownloadPipeline(ImagesPipeline):
+    def get_media_requests(self, item, info):
+        for url in item.get("photos", []):
+            yield Request(url)
+
+    def item_completed(self, results, item, info):
+        if item.get("photos"):
+            item["photos"] = [itm[1] for itm in results]
         return item

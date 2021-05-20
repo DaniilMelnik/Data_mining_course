@@ -2,6 +2,7 @@ import scrapy
 import json
 from urllib.parse import urlencode
 from ..loaders import InstagramLoader
+import datetime
 
 
 class InstagramSpider(scrapy.Spider):
@@ -11,7 +12,7 @@ class InstagramSpider(scrapy.Spider):
     _login_url = "https://www.instagram.com/accounts/login/ajax/"
     _tags_url = "/explore/tags/"
     _pagination_url = "https://i.instagram.com/api/v1/tags/{0}/sections/"
-    tags = ["python"]
+    tags = ["python", "html"]
 
     def __init__(self, login, password, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -62,10 +63,11 @@ class InstagramSpider(scrapy.Spider):
                 for j in i["data"]["recent"]["sections"]:
                     append_code(j)
 
-        print(1)
         for post_code in post_codes:
             yield scrapy.Request(
-                url=f"https://www.instagram.com/p/{post_code}/", callback=self.post_parse
+                url=f"https://www.instagram.com/p/{post_code}/",
+                callback=self.post_parse,
+                cb_kwargs={"tag": tag},
             )
 
         yield from self.paginate(response, tag)
@@ -96,10 +98,18 @@ class InstagramSpider(scrapy.Spider):
             },
         )
 
-    def post_parse(self, response):
-        print(1)
+    def post_parse(self, response, tag):
+        additional_js_data = self.additional_data_extract(response)
+        image_url = additional_js_data["graphql"]["shortcode_media"]["display_resources"][0]["src"]
         loader = InstagramLoader(response=response)
-        loader.add_value("url", response.url)
+        data = {
+            "tag": tag,
+            "url": response.url,
+            "photos": [image_url],
+            "date_parse": datetime.datetime.utcnow(),
+        }
+        for key, val in data.items():
+            loader.add_value(key, val)
         yield loader.load_item()
 
     def js_data_extract(self, response):
@@ -107,4 +117,16 @@ class InstagramSpider(scrapy.Spider):
             '//script[contains(text(), "window._sharedData =")]/text()'
         ).extract_first()
         json_data = json.loads(script.replace("window._sharedData = ", "")[:-1])
+        return json_data
+
+    def additional_data_extract(self, response):
+        script = response.xpath(
+            '//script[contains(text(), "window.__additionalDataLoaded(")]/text()'
+        ).extract_first()
+        json_data = json.loads(
+            script.replace(
+                f'window.__additionalDataLoaded(\'/p/{response.url.rsplit("/", maxsplit=2)[1]}/\',',
+                "",
+            )[:-2]
+        )
         return json_data
